@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Session Timer — Rhythm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --c-idle: #111318;
+}
+
+html, body {
+  width: 100%; height: 100vh; height: 100dvh;
+  overflow: hidden;
+  background: var(--c-idle);
+  font-family: 'DM Sans', sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+#app {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  transition: background-color 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: var(--c-idle);
+  position: relative;
+}
+
+.top-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.5rem 1.8rem;
+}
+
+.wordmark {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem; font-weight: 300;
+  letter-spacing: 0.25em; text-transform: uppercase;
+  color: rgba(255,255,255,0.25); transition: color 0.5s;
+}
+.wordmark.dark { color: rgba(0,0,0,0.25); }
+
+.session-badge {
+  font-size: 0.7rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: rgba(255,255,255,0.25); transition: color 0.5s;
+}
+.session-badge.dark { color: rgba(0,0,0,0.25); }
+
+/* Settings btn */
+.settings-btn {
+  position: absolute; bottom: 1.5rem; right: 1.5rem;
+  width: 40px; height: 40px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50%; color: rgba(255,255,255,0.3);
+  font-size: 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.settings-btn:active { background: rgba(255,255,255,0.15); }
+.settings-btn.dark {
+  background: rgba(0,0,0,0.1); border-color: rgba(0,0,0,0.15); color: rgba(0,0,0,0.3);
+}
+
+/* ── IDLE ── */
+#idleScreen {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+
+.idle-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem; font-weight: 300;
+  letter-spacing: 0.35em; text-transform: uppercase;
+  color: rgba(255,255,255,0.2); margin-bottom: 3.5rem;
+}
+
+.start-ring {
+  width: 200px; height: 200px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem;
+  transition: all 0.25s ease; position: relative;
+}
+.start-ring::before {
+  content: ''; position: absolute; inset: 8px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.start-ring:active { transform: scale(0.94); background: rgba(255,255,255,0.06); }
+.start-ring .main-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2rem; font-weight: 400; letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.85);
+}
+.start-ring .sub-label {
+  font-size: 0.65rem; letter-spacing: 0.3em;
+  text-transform: uppercase; color: rgba(255,255,255,0.3); font-weight: 300;
+}
+
+/* Lamp status indicator on idle */
+.lamp-indicator {
+  position: absolute; bottom: 1.5rem; left: 1.5rem;
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+}
+.lamp-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,0.15); transition: background 0.4s;
+}
+.lamp-dot.ok { background: #00C853; }
+.lamp-dot.warn { background: #FFD600; }
+
+/* ── RUNNING ── */
+#runningScreen {
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  width: 100%; height: 100%; position: relative;
+}
+
+.stage-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(3rem, 10vw, 5rem); font-weight: 300;
+  letter-spacing: 0.05em; text-align: center; line-height: 1;
+  transition: color 0.3s;
+}
+
+.stage-time {
+  font-size: 0.8rem; letter-spacing: 0.2em; text-transform: uppercase;
+  margin-top: 1.2rem; font-weight: 300; transition: color 0.3s;
+}
+
+.arc-wrapper {
+  position: absolute; bottom: 4.5rem;
+  width: 80px; height: 80px;
+}
+.arc-wrapper svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.arc-bg   { fill: none; stroke: rgba(255,255,255,0.12); stroke-width: 2; }
+.arc-fill { fill: none; stroke: rgba(255,255,255,0.6);  stroke-width: 2; stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, stroke 0.5s; }
+.arc-fill.dark { stroke: rgba(0,0,0,0.4); }
+.arc-bg.dark   { stroke: rgba(0,0,0,0.12); }
+
+.stage-dots { position: absolute; bottom: 1.8rem; display: flex; gap: 10px; align-items: center; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: all 0.4s ease; }
+.dot.active { background: rgba(255,255,255,0.9); transform: scale(1.3); }
+.dot.done   { background: rgba(255,255,255,0.45); }
+.dot.dark         { background: rgba(0,0,0,0.15); }
+.dot.dark.active  { background: rgba(0,0,0,0.55); }
+.dot.dark.done    { background: rgba(0,0,0,0.3); }
+
+/* Lamp error toast */
+.lamp-toast {
+  position: absolute; top: 4.5rem; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.35); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 50px;
+  padding: 0.4rem 1rem; font-size: 0.65rem; letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.45); text-transform: uppercase;
+  opacity: 0; transition: opacity 0.3s; pointer-events: none;
+}
+.lamp-toast.show { opacity: 1; }
+.lamp-toast.dark { background: rgba(255,255,255,0.2); color: rgba(0,0,0,0.45); border-color: rgba(0,0,0,0.1); }
+
+/* ── COMPLETE ── */
+#completeScreen {
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+}
+.complete-label {
+  font-family: 'Cormorant Garamond', serif; font-size: 2.2rem; font-weight: 300;
+  letter-spacing: 0.06em; color: rgba(255,255,255,0.85); margin-bottom: 0.5rem;
+}
+.complete-sub {
+  font-size: 0.7rem; letter-spacing: 0.25em; text-transform: uppercase;
+  color: rgba(255,255,255,0.3); margin-bottom: 3.5rem;
+}
+.reset-ring {
+  width: 160px; height: 160px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.05); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem;
+  transition: all 0.25s ease;
+}
+.reset-ring:active { transform: scale(0.94); background: rgba(255,255,255,0.1); }
+.reset-ring .main-label {
+  font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 400;
+  color: rgba(255,255,255,0.85); letter-spacing: 0.05em;
+}
+.reset-ring .sub-label {
+  font-size: 0.6rem; letter-spacing: 0.25em;
+  text-transform: uppercase; color: rgba(255,255,255,0.35);
+}
+.auto-reset-count {
+  font-size: 0.65rem; letter-spacing: 0.2em; color: rgba(255,255,255,0.25);
+  margin-top: 2rem; text-transform: uppercase;
+}
+
+/* ── SETTINGS PANEL ── */
+#settingsPanel {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(5,7,12,0.94); backdrop-filter: blur(16px);
+  flex-direction: column; align-items: center; justify-content: center;
+  padding: 2.5rem 2rem; overflow-y: auto;
+}
+#settingsPanel.open { display: flex; }
+
+.settings-title {
+  font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 400;
+  letter-spacing: 0.05em; color: white; margin-bottom: 0.3rem;
+}
+.settings-sub {
+  font-size: 0.7rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.3); margin-bottom: 2rem;
+}
+
+.field { width: 100%; max-width: 380px; margin-bottom: 0.9rem; }
+.field label {
+  display: block; font-size: 0.65rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 0.35rem;
+}
+.field input {
+  width: 100%; padding: 0.7rem 1rem;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; color: white; font-size: 0.85rem;
+  font-family: 'DM Sans', sans-serif; transition: border-color 0.2s;
+}
+.field input:focus { outline: none; border-color: rgba(255,255,255,0.35); }
+.field input::placeholder { color: rgba(255,255,255,0.2); }
+.field .hint {
+  font-size: 0.62rem; color: rgba(255,255,255,0.25);
+  margin-top: 0.3rem; line-height: 1.5; padding-left: 0.2rem;
+}
+
+.btn-row { display: flex; gap: 0.75rem; margin-top: 1.2rem; }
+.btn-save {
+  padding: 0.75rem 2.5rem; border-radius: 50px; border: none;
+  background: white; color: #111318; font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem; font-weight: 600; letter-spacing: 0.05em; cursor: pointer;
+}
+.btn-save:active { opacity: 0.8; }
+.btn-test {
+  padding: 0.75rem 1.5rem; border-radius: 50px;
+  border: 1px solid rgba(255,255,255,0.2); background: transparent;
+  color: rgba(255,255,255,0.5); font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem; cursor: pointer;
+}
+.btn-test:active { background: rgba(255,255,255,0.05); }
+.btn-cancel {
+  padding: 0.75rem 1.5rem; border-radius: 50px;
+  border: 1px solid rgba(255,255,255,0.1); background: transparent;
+  color: rgba(255,255,255,0.3); font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem; cursor: pointer;
+}
+
+.test-result {
+  margin-top: 1rem; font-size: 0.72rem; letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.3); text-align: center; min-height: 1.2rem;
+}
+.test-result.ok   { color: #00C853; }
+.test-result.fail { color: #FF6D00; }
+
+.settings-hint {
+  margin-top: 1.5rem; max-width: 380px;
+  font-size: 0.7rem; color: rgba(255,255,255,0.18);
+  text-align: center; line-height: 1.8;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.4s ease forwards; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="top-bar">
+    <div class="wordmark" id="wordmark">Rhythm</div>
+    <div class="session-badge" id="sessionBadge"></div>
+  </div>
+
+  <!-- IDLE -->
+  <div id="idleScreen">
+    <div class="idle-title">50 min session</div>
+    <div class="start-ring" onclick="startSession()">
+      <span class="main-label">Start</span>
+      <span class="sub-label">Tap to begin</span>
+    </div>
+  </div>
+
+  <!-- RUNNING -->
+  <div id="runningScreen">
+    <div class="lamp-toast" id="lampToast">Lamp offline — screen only</div>
+    <div class="stage-name" id="stageName">Session</div>
+    <div class="stage-time" id="stageTime"></div>
+    <div class="arc-wrapper">
+      <svg viewBox="0 0 80 80">
+        <circle class="arc-bg"   id="arcBg"   cx="40" cy="40" r="34"/>
+        <circle class="arc-fill" id="arcFill" cx="40" cy="40" r="34"
+          stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+      </svg>
+    </div>
+    <div class="stage-dots" id="stageDots">
+      <div class="dot" data-i="0"></div>
+      <div class="dot" data-i="1"></div>
+      <div class="dot" data-i="2"></div>
+      <div class="dot" data-i="3"></div>
+    </div>
+  </div>
+
+  <!-- COMPLETE -->
+  <div id="completeScreen">
+    <div class="complete-label">Session complete</div>
+    <div class="complete-sub">Ready for next client</div>
+    <div class="reset-ring" onclick="resetNow()">
+      <span class="main-label">Start</span>
+      <span class="sub-label">Next session</span>
+    </div>
+    <div class="auto-reset-count" id="autoResetCount"></div>
+  </div>
+
+  <!-- Lamp indicator (idle only) -->
+  <div class="lamp-indicator" id="lampIndicator">
+    <div class="lamp-dot" id="lampDot"></div>
+    <span id="lampLabel">Lamp</span>
+  </div>
+
+  <button class="settings-btn" id="settingsBtn" onclick="openSettings()">⚙</button>
+
+</div>
+
+<!-- SETTINGS -->
+<div id="settingsPanel">
+  <div class="settings-title">Lamp Setup</div>
+  <div class="settings-sub">Govee Table Lamp 2</div>
+
+  <div class="field">
+    <label>Proxy URL</label>
+    <input type="url" id="f_proxy" placeholder="https://yoursite.netlify.app/.netlify/functions/govee-proxy" autocomplete="off">
+    <div class="hint">Your Netlify function URL. See setup instructions.</div>
+  </div>
+  <div class="field">
+    <label>Device ID</label>
+    <input type="text" id="f_deviceId" placeholder="AA:BB:CC:DD:EE:FF:00:11" autocomplete="off">
+    <div class="hint">Govee app → your lamp → edit ✏️ → Device Info</div>
+  </div>
+  <div class="field">
+    <label>Device Model</label>
+    <input type="text" id="f_deviceModel" placeholder="H6022" autocomplete="off">
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-save" onclick="saveSettings()">Save</button>
+    <button class="btn-test" onclick="testLamp()">Test Lamp</button>
+    <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+  </div>
+
+  <div class="test-result" id="testResult"></div>
+
+  <div class="settings-hint">
+    <strong style="color:rgba(255,255,255,0.4)">Timer works without lamp.</strong><br>
+    Screen colour changes regardless — lamp is a bonus.<br><br>
+    <strong style="color:rgba(255,255,255,0.4)">API key lives in Netlify</strong> (not here).<br>
+    Set <code style="color:rgba(255,255,255,0.35)">GOVEE_API_KEY</code> in Netlify → Site Settings → Environment Variables.
+  </div>
+</div>
+
+<script>
+/* ── STAGES ─────────────────────────────────────────────── */
+const STAGES = [
+  { name:'Session',       bg:'#00C853', dark:false, duration:35*60, rgb:{r:0,  g:200,b:83}  },
+  { name:'Wrapping Up',   bg:'#FFD600', dark:true,  duration: 7*60, rgb:{r:255,g:214,b:0}   },
+  { name:'Consolidating', bg:'#FF6D00', dark:false, duration: 5*60, rgb:{r:255,g:109,b:0}   },
+  { name:'Closing',       bg:'#D50000', dark:false, duration: 3*60, rgb:{r:213,g:0,  b:0}   },
+];
+const CIRCUMFERENCE = 2 * Math.PI * 34; // ≈ 213.6
+
+/* ── STATE ──────────────────────────────────────────────── */
+let elapsed=0, currentStage=-1, interval=null, sessionCount=0;
+let wakeLock=null, autoResetTimer=null;
+let lampOnline = null; // null=unknown, true=ok, false=failed
+
+/* ── PROXY / GOVEE ──────────────────────────────────────── */
+async function goveeCmd(cmd) {
+  const proxy = localStorage.getItem('g_proxy');
+  const dev   = localStorage.getItem('g_dev');
+  const mod   = localStorage.getItem('g_mod');
+  if (!proxy || !dev || !mod) return false;
+  try {
+    const res = await fetch(proxy, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device:dev, model:mod, cmd }),
+    });
+    return res.ok;
+  } catch { return false; }
+}
+
+async function goveeColor(rgb)  { return goveeCmd({ name:'color', value:rgb }); }
+async function goveeOff()       { return goveeCmd({ name:'turn',  value:'off' }); }
+
+function showLampToast(dark) {
+  const t = document.getElementById('lampToast');
+  t.className = 'lamp-toast show' + (dark ? ' dark' : '');
+  setTimeout(() => { t.className = 'lamp-toast' + (dark ? ' dark' : ''); }, 4000);
+}
+
+/* ── WAKE LOCK ──────────────────────────────────────────── */
+async function grabWakeLock() {
+  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch {}
+}
+function dropWakeLock() {
+  try { if (wakeLock) { wakeLock.release(); wakeLock=null; } } catch {}
+}
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState==='visible' && interval && !wakeLock) grabWakeLock();
+});
+
+/* ── TIMER ──────────────────────────────────────────────── */
+function stageAt(secs) {
+  let acc=0;
+  for (let i=0;i<STAGES.length;i++) { acc+=STAGES[i].duration; if(secs<acc) return i; }
+  return STAGES.length;
+}
+function stageStart(idx) {
+  let acc=0; for(let i=0;i<idx;i++) acc+=STAGES[i].duration; return acc;
+}
+
+function tick() {
+  elapsed++;
+  const si = stageAt(elapsed);
+  if (si >= STAGES.length) { endSession(); return; }
+  if (si !== currentStage) { currentStage=si; applyStage(si); }
+  updateProgress();
+}
+
+async function applyStage(si) {
+  const s=STAGES[si], dark=s.dark;
+  document.getElementById('app').style.backgroundColor = s.bg;
+
+  const nameEl = document.getElementById('stageName');
+  nameEl.textContent = s.name;
+  nameEl.style.color = dark ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.9)';
+  nameEl.classList.remove('fade-in'); void nameEl.offsetWidth; nameEl.classList.add('fade-in');
+
+  document.getElementById('stageTime').style.color =
+    dark ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.45)';
+
+  document.getElementById('arcFill').className = 'arc-fill'+(dark?' dark':'');
+  document.getElementById('arcBg').className   = 'arc-bg'  +(dark?' dark':'');
+
+  document.querySelectorAll('.dot').forEach((d,i) => {
+    d.className = 'dot'+(dark?' dark':'')+
+      (i===si?' active':i<si?' done':'');
+  });
+
+  document.getElementById('wordmark').className    = 'wordmark'      +(dark?' dark':'');
+  document.getElementById('sessionBadge').className= 'session-badge' +(dark?' dark':'');
+  document.getElementById('settingsBtn').className = 'settings-btn'  +(dark?' dark':'');
+
+  // Govee — fire and check
+  const ok = await goveeColor(s.rgb);
+  if (!ok) showLampToast(dark);
+}
+
+function updateProgress() {
+  const s=STAGES[currentStage], ss=stageStart(currentStage);
+  const inStage=elapsed-ss, left=s.duration-inStage;
+  document.getElementById('arcFill').style.strokeDashoffset =
+    CIRCUMFERENCE*(1-(inStage/s.duration));
+  const m=Math.floor(left/60), sec=left%60;
+  document.getElementById('stageTime').textContent =
+    `${m}:${String(sec).padStart(2,'0')} remaining`;
+}
+
+/* ── SESSION CONTROL ────────────────────────────────────── */
+async function startSession() {
+  elapsed=0; currentStage=-1; sessionCount++;
+  document.getElementById('sessionBadge').textContent = `Session ${sessionCount}`;
+  document.getElementById('idleScreen').style.display     = 'none';
+  document.getElementById('completeScreen').style.display = 'none';
+  document.getElementById('runningScreen').style.display  = 'flex';
+  document.getElementById('lampIndicator').style.display  = 'none';
+  await grabWakeLock();
+  tick();
+  interval = setInterval(tick, 1000);
+}
+
+async function endSession() {
+  clearInterval(interval); interval=null;
+  dropWakeLock();
+  goveeOff();
+  document.getElementById('runningScreen').style.display  = 'none';
+  document.getElementById('app').style.backgroundColor    = '#111318';
+  document.getElementById('completeScreen').style.display = 'flex';
+  document.getElementById('wordmark').className    = 'wordmark';
+  document.getElementById('sessionBadge').className= 'session-badge';
+  document.getElementById('settingsBtn').className = 'settings-btn';
+  let countdown=12;
+  const el=document.getElementById('autoResetCount');
+  el.textContent=`Auto-ready in ${countdown}s`;
+  autoResetTimer=setInterval(()=>{
+    countdown--;
+    if(countdown<=0){clearInterval(autoResetTimer);resetNow();}
+    else el.textContent=`Auto-ready in ${countdown}s`;
+  },1000);
+}
+
+function resetNow() {
+  if(autoResetTimer){clearInterval(autoResetTimer);autoResetTimer=null;}
+  document.getElementById('completeScreen').style.display = 'none';
+  document.getElementById('idleScreen').style.display     = 'flex';
+  document.getElementById('lampIndicator').style.display  = 'flex';
+  document.getElementById('arcFill').style.strokeDashoffset = CIRCUMFERENCE;
+}
+
+/* ── SETTINGS ───────────────────────────────────────────── */
+function openSettings() {
+  document.getElementById('f_proxy').value      = localStorage.getItem('g_proxy') || '';
+  document.getElementById('f_deviceId').value   = localStorage.getItem('g_dev')   || '';
+  document.getElementById('f_deviceModel').value= localStorage.getItem('g_mod')   || '';
+  document.getElementById('testResult').textContent = '';
+  document.getElementById('testResult').className = 'test-result';
+  document.getElementById('settingsPanel').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsPanel').classList.remove('open');
+}
+
+function saveSettings() {
+  const p=document.getElementById('f_proxy').value.trim();
+  const d=document.getElementById('f_deviceId').value.trim();
+  const m=document.getElementById('f_deviceModel').value.trim();
+  if(p) localStorage.setItem('g_proxy',p);
+  if(d) localStorage.setItem('g_dev',d);
+  if(m) localStorage.setItem('g_mod',m);
+  updateLampIndicator();
+  closeSettings();
+}
+
+async function testLamp() {
+  saveSettings();
+  const el=document.getElementById('testResult');
+  el.className='test-result'; el.textContent='Testing...';
+  const ok = await goveeColor({r:0,g:200,b:83});
+  if(ok) {
+    el.className='test-result ok'; el.textContent='✓ Lamp connected — turned green';
+    setTimeout(()=>goveeOff(),3000);
+  } else {
+    el.className='test-result fail';
+    el.textContent='✗ Could not reach lamp — check proxy URL and Netlify setup';
+  }
+}
+
+function updateLampIndicator() {
+  const ready = !!(localStorage.getItem('g_proxy') &&
+                   localStorage.getItem('g_dev') &&
+                   localStorage.getItem('g_mod'));
+  const dot   = document.getElementById('lampDot');
+  const label = document.getElementById('lampLabel');
+  dot.className   = 'lamp-dot' + (ready ? ' ok' : '');
+  label.textContent = ready ? 'Lamp ready' : 'Lamp not configured';
+}
+
+/* ── INIT ───────────────────────────────────────────────── */
+updateLampIndicator();
+</script>
+</body>
+</html>
