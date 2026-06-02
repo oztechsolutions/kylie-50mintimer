@@ -460,6 +460,35 @@ async function goveeOn() {
   });
 }
 
+// Query current power state; returns true if lamp is already on, false if off/unknown
+async function goveeIsOn() {
+  const { apiKey, device, sku } = goveeConfig();
+  if (!apiKey || !device || !sku) return false;
+  try {
+    const requestId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+    const res = await fetch('https://openapi.api.govee.com/router/api/v1/device/state', {
+      method: 'POST',
+      headers: { 'Govee-API-Key': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestId, payload: { sku, device } }),
+    });
+    const data = await res.json().catch(() => ({}));
+    // Find powerSwitch capability in returned state
+    const caps = data?.payload?.capabilities || [];
+    const power = caps.find(c => c.instance === 'powerSwitch');
+    return power?.state?.value === 1;
+  } catch { return false; }
+}
+
+// Turn on only if currently off
+async function goveeEnsureOn() {
+  const isOn = await goveeIsOn();
+  if (!isOn) return goveeOn();
+  return true;
+}
+
 async function goveeOff() {
   return goveeControl({
     type: 'devices.capabilities.on_off',
@@ -532,8 +561,8 @@ async function applyStage(si) {
   document.getElementById('sessionBadge').className = 'session-badge' + (dark ? ' dark' : '');
   document.getElementById('settingsBtn').className  = 'settings-btn'  + (dark ? ' dark' : '');
 
-  // Turn lamp on and set colour
-  await goveeOn();
+  // Turn lamp on only if needed, then set colour
+  await goveeEnsureOn();
   const ok = await goveeColor(s.rgb);
   if (!ok) showLampToast(dark);
 }
@@ -692,7 +721,7 @@ async function testLamp() {
   const el = document.getElementById('testResult');
   el.className = 'test-result'; el.textContent = 'Testing…';
 
-  await goveeOn();
+  await goveeEnsureOn();
   const ok = await goveeColor({ r: 0, g: 200, b: 83 });
 
   if (ok) {
