@@ -235,6 +235,65 @@ html, body {
   color: rgba(255,255,255,0.18); text-align: center; line-height: 1.8;
 }
 
+/* Test console */
+.test-console {
+  width: 100%; max-width: 380px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 1rem 1.1rem;
+  margin-top: 1.2rem; display: none; flex-direction: column; gap: 0.85rem;
+}
+.test-console.open { display: flex; }
+.test-console-title {
+  font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.3); margin-bottom: 0.1rem;
+}
+.tc-row { display: flex; align-items: center; gap: 0.6rem; }
+.tc-btn {
+  flex: 1; padding: 0.6rem 0; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6);
+  font-family: 'DM Sans', sans-serif; font-size: 0.8rem; letter-spacing: 0.08em;
+  cursor: pointer; transition: all 0.18s; text-align: center;
+}
+.tc-btn:active { background: rgba(255,255,255,0.14); }
+.tc-btn.on  { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.4); color: white; }
+.tc-btn.off { background: rgba(0,0,0,0.25);        border-color: rgba(255,255,255,0.08); color: rgba(255,255,255,0.3); }
+.tc-divider { height: 1px; background: rgba(255,255,255,0.07); }
+.tc-swatch {
+  width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: background-color 0.3s; background: rgb(0,200,83);
+}
+.tc-rgb { flex: 1; display: flex; flex-direction: column; gap: 0.4rem; }
+.tc-slider-row { display: flex; align-items: center; gap: 0.5rem; }
+.tc-slider-label { font-size: 0.6rem; letter-spacing: 0.12em; width: 10px; color: rgba(255,255,255,0.35); }
+.tc-slider {
+  flex: 1; -webkit-appearance: none; height: 3px; border-radius: 2px;
+  outline: none; cursor: pointer;
+}
+.tc-slider.r { background: linear-gradient(to right, #111318, #ff0000); }
+.tc-slider.g { background: linear-gradient(to right, #111318, #00ff00); }
+.tc-slider.b { background: linear-gradient(to right, #111318, #0000ff); }
+.tc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px;
+  border-radius: 50%; background: white; border: 2px solid rgba(0,0,0,0.3);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+.tc-val { font-size: 0.65rem; color: rgba(255,255,255,0.3); width: 24px; text-align: right; }
+.tc-send-btn {
+  width: 100%; padding: 0.6rem; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.6); font-family: 'DM Sans', sans-serif;
+  font-size: 0.78rem; letter-spacing: 0.08em; cursor: pointer; transition: all 0.18s;
+}
+.tc-send-btn:active { background: rgba(255,255,255,0.15); }
+.tc-status {
+  font-size: 0.65rem; letter-spacing: 0.1em; color: rgba(255,255,255,0.25);
+  text-align: center; min-height: 1rem;
+}
+.tc-status.ok   { color: #00C853; }
+.tc-status.fail { color: #FF6D00; }
+
 /* Device picker */
 .btn-load-devices {
   width: 100%; max-width: 380px; padding: 0.65rem 1rem;
@@ -364,11 +423,49 @@ html, body {
 
   <div class="btn-row">
     <button class="btn-save" onclick="saveSettings()">Save</button>
-    <button class="btn-test" onclick="testLamp()">Test Lamp</button>
+    <button class="btn-test" onclick="toggleTestConsole()">Test Lamp</button>
     <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
   </div>
 
-  <div class="test-result" id="testResult"></div>
+  <!-- Test Console -->
+  <div class="test-console" id="testConsole">
+    <div class="test-console-title">Lamp Test Console</div>
+
+    <!-- On / Off -->
+    <div class="tc-row">
+      <button class="tc-btn" id="tcBtnOn"  onclick="tcTurnOn()">Turn On</button>
+      <button class="tc-btn" id="tcBtnOff" onclick="tcTurnOff()">Turn Off</button>
+    </div>
+
+    <div class="tc-divider"></div>
+
+    <!-- Colour picker -->
+    <div class="tc-row">
+      <div class="tc-swatch" id="tcSwatch"></div>
+      <div class="tc-rgb">
+        <div class="tc-slider-row">
+          <span class="tc-slider-label" style="color:#ff6b6b">R</span>
+          <input class="tc-slider r" type="range" id="tcR" min="0" max="255" value="0"   oninput="tcSliderChange()">
+          <span class="tc-val" id="tcRval">0</span>
+        </div>
+        <div class="tc-slider-row">
+          <span class="tc-slider-label" style="color:#69db7c">G</span>
+          <input class="tc-slider g" type="range" id="tcG" min="0" max="255" value="200" oninput="tcSliderChange()">
+          <span class="tc-val" id="tcGval">200</span>
+        </div>
+        <div class="tc-slider-row">
+          <span class="tc-slider-label" style="color:#74c0fc">B</span>
+          <input class="tc-slider b" type="range" id="tcB" min="0" max="255" value="83"  oninput="tcSliderChange()">
+          <span class="tc-val" id="tcBval">83</span>
+        </div>
+      </div>
+    </div>
+    <button class="tc-send-btn" onclick="tcSendColor()">Send Colour to Lamp</button>
+
+    <div class="tc-status" id="tcStatus"></div>
+  </div>
+
+  <div class="test-result" id="testResult" style="display:none"></div>
 
   <div class="settings-hint">
     <strong style="color:rgba(255,255,255,0.4)">Timer works without lamp.</strong><br>
@@ -691,6 +788,11 @@ function openSettings() {
   const listEl = document.getElementById('deviceList');
   listEl.style.display = 'none';
   listEl.innerHTML = '';
+  // Reset test console
+  document.getElementById('testConsole').classList.remove('open');
+  document.getElementById('tcStatus').textContent = '';
+  document.getElementById('tcBtnOn').classList.remove('on');
+  document.getElementById('tcBtnOff').classList.remove('off');
   document.getElementById('settingsPanel').classList.add('open');
 }
 
@@ -709,31 +811,79 @@ function saveSettings() {
   closeSettings();
 }
 
-async function testLamp() {
-  // Save first so goveeConfig() picks up the typed values immediately
+/* ── TEST CONSOLE ───────────────────────────────────────── */
+function flushTempConfig() {
+  // Make sure typed-but-unsaved values are live for test calls
   const k = document.getElementById('f_apiKey').value.trim();
   const d = document.getElementById('f_deviceId').value.trim();
   const m = document.getElementById('f_deviceModel').value.trim();
   if (k) localStorage.setItem('g_apiKey', k);
   if (d) localStorage.setItem('g_dev', d);
   if (m) localStorage.setItem('g_mod', m);
+}
 
-  const el = document.getElementById('testResult');
-  el.className = 'test-result'; el.textContent = 'Testing…';
+function toggleTestConsole() {
+  flushTempConfig();
+  const el = document.getElementById('testConsole');
+  el.classList.toggle('open');
+  if (el.classList.contains('open')) tcUpdateSwatch();
+}
 
-  await goveeEnsureOn();
-  const ok = await goveeColor({ r: 0, g: 200, b: 83 });
+function tcSetStatus(msg, type) {
+  const el = document.getElementById('tcStatus');
+  el.textContent = msg;
+  el.className = 'tc-status' + (type ? ' ' + type : '');
+}
 
-  if (ok) {
-    el.className = 'test-result ok';
-    el.textContent = '✓ Lamp connected — turned green';
-    setTimeout(() => goveeOff(), 3000);
-  } else {
-    el.className = 'test-result fail';
-    el.textContent = '✗ Could not reach lamp — check API key and device details';
-  }
+function tcUpdateSwatch() {
+  const r = document.getElementById('tcR').value;
+  const g = document.getElementById('tcG').value;
+  const b = document.getElementById('tcB').value;
+  document.getElementById('tcSwatch').style.backgroundColor = `rgb(${r},${g},${b})`;
+  document.getElementById('tcRval').textContent = r;
+  document.getElementById('tcGval').textContent = g;
+  document.getElementById('tcBval').textContent = b;
+}
+
+function tcSliderChange() {
+  tcUpdateSwatch();
+}
+
+async function tcTurnOn() {
+  flushTempConfig();
+  tcSetStatus('Turning on…');
+  document.getElementById('tcBtnOn').classList.add('on');
+  document.getElementById('tcBtnOff').classList.remove('off');
+  const ok = await goveeOn();
+  tcSetStatus(ok ? '✓ Lamp on' : '✗ Failed to reach lamp', ok ? 'ok' : 'fail');
+  if (!ok) document.getElementById('tcBtnOn').classList.remove('on');
   updateLampIndicator();
 }
+
+async function tcTurnOff() {
+  flushTempConfig();
+  tcSetStatus('Turning off…');
+  document.getElementById('tcBtnOff').classList.add('off');
+  document.getElementById('tcBtnOn').classList.remove('on');
+  const ok = await goveeOff();
+  tcSetStatus(ok ? '✓ Lamp off' : '✗ Failed to reach lamp', ok ? 'ok' : 'fail');
+  if (!ok) document.getElementById('tcBtnOff').classList.remove('off');
+}
+
+async function tcSendColor() {
+  flushTempConfig();
+  const r = parseInt(document.getElementById('tcR').value);
+  const g = parseInt(document.getElementById('tcG').value);
+  const b = parseInt(document.getElementById('tcB').value);
+  tcSetStatus(`Sending rgb(${r}, ${g}, ${b})…`);
+  await goveeEnsureOn();
+  const ok = await goveeColor({ r, g, b });
+  tcSetStatus(ok ? `✓ Color set — rgb(${r}, ${g}, ${b})` : '✗ Failed to set color', ok ? 'ok' : 'fail');
+  updateLampIndicator();
+}
+
+// Keep old testLamp for compatibility (now unused in UI but safe to keep)
+async function testLamp() { await tcSendColor(); }
 
 function updateLampIndicator() {
   const ready = !!(localStorage.getItem('g_apiKey') &&
