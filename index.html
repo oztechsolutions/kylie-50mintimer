@@ -581,9 +581,7 @@ async function goveeIsOn() {
 
 // Turn on only if currently off
 async function goveeEnsureOn() {
-  const isOn = await goveeIsOn();
-  if (!isOn) return goveeOn();
-  return true;
+  return await goveeOn();
 }
 
 async function goveeOff() {
@@ -635,33 +633,74 @@ function tick() {
 }
 
 async function applyStage(si) {
-  const s = STAGES[si], dark = s.dark;
+  const s = STAGES[si];
+  const dark = s.dark;
+
+  // UI updates
   document.getElementById('app').style.backgroundColor = s.bg;
 
   const nameEl = document.getElementById('stageName');
   nameEl.textContent = s.name;
-  nameEl.style.color = dark ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.9)';
-  nameEl.classList.remove('fade-in'); void nameEl.offsetWidth; nameEl.classList.add('fade-in');
+  nameEl.style.color = dark
+    ? 'rgba(0,0,0,0.75)'
+    : 'rgba(255,255,255,0.9)';
+
+  nameEl.classList.remove('fade-in');
+  void nameEl.offsetWidth;
+  nameEl.classList.add('fade-in');
 
   document.getElementById('stageTime').style.color =
-    dark ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.45)';
+    dark
+      ? 'rgba(0,0,0,0.4)'
+      : 'rgba(255,255,255,0.45)';
 
-  document.getElementById('arcFill').className = 'arc-fill' + (dark ? ' dark' : '');
-  document.getElementById('arcBg').className   = 'arc-bg'   + (dark ? ' dark' : '');
+  document.getElementById('arcFill').className =
+    'arc-fill' + (dark ? ' dark' : '');
+
+  document.getElementById('arcBg').className =
+    'arc-bg' + (dark ? ' dark' : '');
 
   document.querySelectorAll('.dot').forEach((d, i) => {
-    d.className = 'dot' + (dark ? ' dark' : '') +
+    d.className =
+      'dot' +
+      (dark ? ' dark' : '') +
       (i === si ? ' active' : i < si ? ' done' : '');
   });
 
-  document.getElementById('wordmark').className     = 'wordmark'      + (dark ? ' dark' : '');
-  document.getElementById('sessionBadge').className = 'session-badge' + (dark ? ' dark' : '');
-  document.getElementById('settingsBtn').className  = 'settings-btn'  + (dark ? ' dark' : '');
+  document.getElementById('wordmark').className =
+    'wordmark' + (dark ? ' dark' : '');
 
-  // Turn lamp on only if needed, then set colour
-  await goveeEnsureOn();
-  const ok = await goveeColor(s.rgb);
-  if (!ok) showLampToast(dark);
+  document.getElementById('sessionBadge').className =
+    'session-badge' + (dark ? ' dark' : '');
+
+  document.getElementById('settingsBtn').className =
+    'settings-btn' + (dark ? ' dark' : '');
+
+  // -----------------------------
+  // GOVEE CONTROL
+  // -----------------------------
+  try {
+    console.log('Stage change:', s.name);
+    console.log('Turning lamp on...');
+
+    await goveeOn();
+
+    // Lamp needs time to wake up
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    console.log('Sending color:', s.rgb);
+
+    const ok = await goveeColor(s.rgb);
+
+    console.log('Color result:', ok);
+
+    if (!ok) {
+      showLampToast(dark);
+    }
+  } catch (err) {
+    console.error('Stage lamp error:', err);
+    showLampToast(dark);
+  }
 }
 
 function updateProgress() {
@@ -676,14 +715,29 @@ function updateProgress() {
 
 /* ── SESSION CONTROL ────────────────────────────────────── */
 async function startSession() {
-  elapsed = 0; currentStage = -1; sessionCount++;
-  document.getElementById('sessionBadge').textContent = `Session ${sessionCount}`;
-  document.getElementById('idleScreen').style.display     = 'none';
+  elapsed = 0;
+  currentStage = -1;
+  sessionCount++;
+
+  document.getElementById('sessionBadge').textContent =
+    `Session ${sessionCount}`;
+
+  document.getElementById('idleScreen').style.display = 'none';
   document.getElementById('completeScreen').style.display = 'none';
-  document.getElementById('runningScreen').style.display  = 'flex';
-  document.getElementById('lampIndicator').style.display  = 'none';
+  document.getElementById('runningScreen').style.display = 'flex';
+  document.getElementById('lampIndicator').style.display = 'none';
+
   await grabWakeLock();
+
+  try {
+    await goveeOn();
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  } catch (e) {
+    console.error('Initial lamp startup failed', e);
+  }
+
   tick();
+
   interval = setInterval(tick, 1000);
 }
 
