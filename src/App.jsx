@@ -173,7 +173,8 @@ function App() {
   }, [stages]);
 
   useEffect(() => {
-    if (paused || currentStageIndex < 0) return undefined;
+    const isInStage = currentStageIndex >= 0 && currentStageIndex < stages.length;
+    if (paused || !isInStage) return undefined;
 
     intervalRef.current = window.setInterval(() => {
       setElapsed((prev) => prev + 1);
@@ -182,7 +183,7 @@ function App() {
     return () => {
       window.clearInterval(intervalRef.current);
     };
-  }, [paused, currentStageIndex]);
+  }, [paused, currentStageIndex, stages.length]);
 
   useEffect(() => {
     if (elapsed === 0) return;
@@ -307,7 +308,9 @@ function App() {
     }
     await releaseWakeLock();
     await goveeOff();
-    setCurrentStageIndex(-1);
+    setPaused(true);
+    setElapsed(totalDuration);
+    setCurrentStageIndex(stages.length);
   };
 
   const resetSession = () => {
@@ -604,12 +607,16 @@ function App() {
               </div>
               <button className="help-close" type="button" onClick={() => setHelpOpen(false)}>✕</button>
             </div>
-            <ol className="help-list">
-              <li>Tap <strong>Start</strong> to begin the session timer.</li>
-              <li>Use the <strong>Pause</strong> button to stop and resume the timer.</li>
-              <li>Open <strong>Settings</strong> to configure the Govee lamp and stage durations / colors.</li>
-              <li>Save settings to persist them locally for next use.</li>
-              <li>When the session ends, the app shows a completion screen and auto-ready countdown.</li>
+           <ol className="help-list">
+            <li>Open <strong>Settings</strong> to set up your Govee lamp, session times, and stage colors.</li>
+            <li>Get your Govee API Key from the Govee app: <strong>Profile → About Us → Apply for API Key</strong>.</li>
+            <li>Go to the <strong>Device</strong> tab, enter your API Key, and select your lamp. You can also add the device manually if needed.</li>
+            <li>Go to the <strong>Session</strong> tab and set the time and color for each session stage.</li>
+            <li>Open the <strong>Test</strong> tab to check that your lamp changes to the selected colors.</li>
+            <li>Click <strong>Save Settings</strong> to store your preferences for future use.</li>
+            <li>Press <strong>Start</strong> to begin your timer session.</li>
+            <li>Use <strong>Pause</strong> anytime to pause the timer and continue later.</li>
+            <li>After the session finishes, the app will show a completion message and start the ready countdown.</li>
             </ol>
             <div className="help-note">Tip: The timer works without the lamp, and the lamp color is optional.</div>
           </div>

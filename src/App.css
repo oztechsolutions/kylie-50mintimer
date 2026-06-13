@@ -203,13 +203,18 @@ button {
   height: 100%;
 }
 
-.stage-name, .stage-row label {
+.stage-row label {
   font-family: 'Cormorant Garamond', serif; 
   font-size: 0.7rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   text-align: center;
   line-height: 1;
+}
+.stage-name{
+  font-family: 'Cormorant Garamond', serif; 
+  text-transform: uppercase;
+  font-size: clamp(2.4rem, 16vw, 4rem);
 }
 
 .stage-time {
@@ -852,9 +857,6 @@ button {
     height: 170px;
   }
 
-  .stage-name {
-    font-size: clamp(2.4rem, 16vw, 4rem);
-  }
 
   .panel-card,
   .help-card {
